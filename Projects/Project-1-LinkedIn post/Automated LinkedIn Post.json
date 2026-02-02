@@ -1,0 +1,271 @@
+{
+  "name": "Automated LinkedIn Post",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -224,
+        0
+      ],
+      "id": "12ae5031-927f-4d81-93af-7b6aa4f7d169",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "Write a 1–2 line LinkedIn post for my personal LinkedIn profile about Generative AI and Agentic AI. Keep the tone professional and natural, without emojis. Use no more than 5 hashtags. You may include 5 short interview question with their answer to engage readers.\n\nBefore generating a new post:\n1. Review past posts from memory\n2. Do NOT repeat the same topic, wording, structure, or key ideas\n3. If a topic is similar, create a clearly fresh angle\n\nAlways generate:\n- Original content\n- New insights or examples\n- Professional LinkedIn tone\n\n\nThe post should feel human-written, not like an AI-generated post. Provide only the LinkedIn post content, with no explanations or extra text.",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        16,
+        0
+      ],
+      "id": "b961257e-7f70-4df8-8b34-13a38a30731b",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        -128,
+        208
+      ],
+      "id": "bcbf08c9-631f-4430-a5d2-ab4b804e3dc5",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "8JCgfoy5fj5KDDlL",
+          "name": "n8n free OpenAI API credits"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "person": "PiYaq27NSb",
+        "text": "={{ $('AI Agent').item.json.output }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.linkedIn",
+      "typeVersion": 1,
+      "position": [
+        848,
+        0
+      ],
+      "id": "ab0351a0-04c4-4639-8af4-40e55532251b",
+      "name": "Create a post",
+      "credentials": {
+        "linkedInOAuth2Api": {
+          "id": "wqCCvn9o8xYAYXq8",
+          "name": "LinkedIn account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 16
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -336,
+        224
+      ],
+      "id": "f5e15ab7-6ae7-4336-aaae-d11cd40a6957",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "operation": "sendAndWait",
+        "sendTo": "siddharthajmera48@gmail.com",
+        "subject": "Automation approval",
+        "message": "=Please review the LinkedIn post and approve:\n\n {{ $('AI Agent').item.json.output }}",
+        "approvalOptions": {
+          "values": {}
+        },
+        "options": {
+          "limitWaitTime": {
+            "values": {
+              "resumeAmount": 15,
+              "resumeUnit": "minutes"
+            }
+          },
+          "appendAttribution": true
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        416,
+        0
+      ],
+      "id": "33a7507e-141d-423c-ae78-48fdc9d60dc7",
+      "name": "Send message and wait for response",
+      "webhookId": "20626395-7965-4a87-baff-81ad30debd6c",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "s1UpTuw2rZXCU4QC",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "=linkedin_post_memory {{ $workflow.name }}",
+        "contextWindowLength": 10
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        32,
+        208
+      ],
+      "id": "ecaf6ddf-39c2-470f-8d7b-1ce45b9c032e",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "70a0d633-e20d-4241-811b-351acff73762",
+              "leftValue": "={{ $json.data.approved }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        624,
+        0
+      ],
+      "id": "d697b446-e78a-4ea7-b1af-00c4d3e4eade",
+      "name": "If"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Send message and wait for response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send message and wait for response": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Create a post",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "0d6ef96a-1367-453c-a8e2-c845c0dc0494",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "51141671f79f358fb6f3191e7e0daa3293c01545d942662a5c24c77d1589381d"
+  },
+  "id": "FsxbZupaU3NLzJ2F2sHI2",
+  "tags": []
+}
