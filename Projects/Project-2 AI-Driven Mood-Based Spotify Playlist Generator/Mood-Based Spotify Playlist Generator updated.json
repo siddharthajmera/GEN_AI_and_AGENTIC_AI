@@ -1,0 +1,535 @@
+{
+  "name": "Mood-Based Spotify Playlist Generator",
+  "nodes": [
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "id-1",
+              "name": "mood",
+              "value": "={{ $('Mood Input Form').item.json.mood }}",
+              "type": "string"
+            },
+            {
+              "id": "id-2",
+              "name": "numberOfSongs",
+              "value": "={{ $('Mood Input Form').item.json.numberOfSongs }}",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "70ef5b31-2c82-4ffd-a2df-16a423f0ae92",
+      "name": "Workflow Configuration",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        656,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n\t\"playlist_name\": \"My Mood Playlist\",\n\t\"mood\": \"happy\",\n\t\"songs\": [\n\t\t{\n\t\t\t\"title\": \"Song Title\",\n\t\t\t\"artist\": \"Artist Name\"\n\t\t}\n\t]\n}"
+      },
+      "id": "60c25e8e-904d-4580-a49b-faa264134912",
+      "name": "Structured Output Parser",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        1168,
+        256
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "id": "3f6ce4a7-9181-405a-b4d8-0b973dd10c60",
+      "name": "OpenAI Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        752,
+        272
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "v4DtOMp6wlm11b6q",
+          "name": "OpenAi account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ 'Generate a playlist based on the mood: ' + $json.mood + '. The playlist should contain approximately ' + $json.numberOfSongs + ' songs.' }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are a music expert who creates mood-based playlists with deep knowledge of songs that match different emotional states. You have access to memory of previously generated playlists.\n\nYour task is to:\n1. Analyze the provided mood\n2. Select songs that perfectly match that emotional state\n3. Create a cohesive playlist with the requested number of songs\n4. Output the results in JSON format\n5. Do not repeat playlist names from recent memory.\n6. Avoid repeating artists used recently for the same mood. \n7. Prefer new artists and song combinations.\n\nThe output must include:\n- playlist_name: A creative name for the playlist that reflects the mood\n- mood: The mood/emotional state of the playlist\n- songs: An array of song objects, each containing:\n  - title: The song title\n  - artist: The artist name\n\nEnsure the songs are well-known, accurately match the mood, and create a cohesive listening experience.\n\nYou are a music expert specializing exclusively in Indian music, specifically Hindi (Bollywood songs) and Punjabi songs. You can also include Hollywood (English) songs limited to 30% of list."
+        }
+      },
+      "id": "d3592c79-d6ae-43cd-822b-71abc587f382",
+      "name": "AI Agent - Generate Song Recommendations",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        880,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "playlist",
+        "operation": "create",
+        "name": "={{ $json.output.playlist_name }}",
+        "additionalFields": {
+          "description": "={{ 'A ' + $json.output.mood + ' mood playlist' }}",
+          "public": false
+        }
+      },
+      "id": "37d6c1ee-7da5-4157-b51f-f102f9cd498b",
+      "name": "Create Spotify Playlist",
+      "type": "n8n-nodes-base.spotify",
+      "typeVersion": 1,
+      "position": [
+        1232,
+        0
+      ],
+      "credentials": {
+        "spotifyOAuth2Api": {
+          "id": "xkZqiylGTnR1UzGj",
+          "name": "Spotify account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "id-1",
+              "name": "playlistId",
+              "value": "={{ $json.id }}",
+              "type": "string"
+            },
+            {
+              "id": "id-2",
+              "name": "songs",
+              "value": "={{ $('AI Agent - Generate Song Recommendations').item.json.output.songs }}",
+              "type": "array"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "495c0731-a8dd-4ceb-87d7-80160c73388d",
+      "name": "Extract Playlist ID",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1456,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "songs",
+        "options": {}
+      },
+      "id": "63999694-d2f1-44b3-b9c1-374a7266a96e",
+      "name": "Split Song Recommendations",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        1680,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "track",
+        "operation": "search",
+        "query": "={{ $json.artist + ' ' + $json.title }}",
+        "limit": 1,
+        "filters": {}
+      },
+      "id": "dae5759b-a1d0-45f8-9a9b-42a74231fcfa",
+      "name": "Search for Track on Spotify",
+      "type": "n8n-nodes-base.spotify",
+      "typeVersion": 1,
+      "position": [
+        1904,
+        0
+      ],
+      "credentials": {
+        "spotifyOAuth2Api": {
+          "id": "xkZqiylGTnR1UzGj",
+          "name": "Spotify account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "id-1",
+              "name": "trackUri",
+              "value": "={{ $json.uri }}",
+              "type": "string"
+            },
+            {
+              "id": "id-2",
+              "name": "playlistId",
+              "value": "={{ $('Extract Playlist ID').item.json.playlistId }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a20bb075-370f-4574-b5d6-cb881a4ae9c6",
+      "name": "Format Track URI",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2128,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {}
+      },
+      "id": "fc24f5ab-274b-4fd6-b901-87c27be8ebec",
+      "name": "Aggregate Track URIs",
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        2352,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "playlist",
+        "id": "={{ $json.data[0].playlistId }}",
+        "trackID": "={{ $json.data.map(item => item.trackUri).join(',') }}",
+        "additionalFields": {}
+      },
+      "id": "8f75fc27-7fb0-43d4-b1c4-0eb9d1a9a679",
+      "name": "Add Tracks to Playlist",
+      "type": "n8n-nodes-base.spotify",
+      "typeVersion": 1,
+      "position": [
+        2576,
+        0
+      ],
+      "credentials": {
+        "spotifyOAuth2Api": {
+          "id": "xkZqiylGTnR1UzGj",
+          "name": "Spotify account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "formTitle": "Mood-Based Playlist Generator",
+        "formDescription": "Tell us your current mood and we'll create a personalized Spotify playlist for you!",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "What mood are you in?",
+              "fieldName": "mood",
+              "placeholder": "e.g., happy, sad, energetic, relaxed, nostalgic",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "How many songs?",
+              "fieldType": "number",
+              "fieldName": "numberOfSongs",
+              "placeholder": "20",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "51a1d8e8-a024-472e-8369-1ab17f37d390",
+      "name": "Mood Input Form",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.5,
+      "position": [
+        -16,
+        16
+      ],
+      "webhookId": "f9f86ff2-74fe-4e58-815d-54aec2625632"
+    },
+    {
+      "parameters": {
+        "resource": "table",
+        "options": {}
+      },
+      "id": "c6247878-32c7-4cfc-bc79-a8b59d4c304e",
+      "name": "Store Form Responses",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        432,
+        0
+      ],
+      "alwaysOutputData": true,
+      "executeOnce": true,
+      "retryOnFail": false,
+      "notesInFlow": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "bd884d99-6954-4476-b953-d50ae9bc59ee",
+              "leftValue": "={{ $json.numberOfSongs }}",
+              "rightValue": 4,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            },
+            {
+              "id": "8da1fcec-0f20-4f97-8a18-ba483530a233",
+              "leftValue": "={{ $json.numberOfSongs }}",
+              "rightValue": 31,
+              "operator": {
+                "type": "number",
+                "operation": "lt"
+              }
+            },
+            {
+              "id": "92a19ed0-0949-456b-9da2-7b56a3d9cb9f",
+              "leftValue": "={{ $json.mood }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        192,
+        16
+      ],
+      "id": "71a75cb3-9fa9-4095-a68e-2f200baf49f4",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "=spotify_playlist_history {{ $workflow.id }}",
+        "contextWindowLength": 10
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        864,
+        208
+      ],
+      "id": "af0a7cb1-6f91-422f-9016-2c85e74d661d",
+      "name": "Simple Memory"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Workflow Configuration": {
+      "main": [
+        [
+          {
+            "node": "AI Agent - Generate Song Recommendations",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Agent - Generate Song Recommendations",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent - Generate Song Recommendations",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent - Generate Song Recommendations": {
+      "main": [
+        [
+          {
+            "node": "Create Spotify Playlist",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Spotify Playlist": {
+      "main": [
+        [
+          {
+            "node": "Extract Playlist ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Playlist ID": {
+      "main": [
+        [
+          {
+            "node": "Split Song Recommendations",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Song Recommendations": {
+      "main": [
+        [
+          {
+            "node": "Search for Track on Spotify",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search for Track on Spotify": {
+      "main": [
+        [
+          {
+            "node": "Format Track URI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Track URI": {
+      "main": [
+        [
+          {
+            "node": "Aggregate Track URIs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate Track URIs": {
+      "main": [
+        [
+          {
+            "node": "Add Tracks to Playlist",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mood Input Form": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Store Form Responses": {
+      "main": [
+        [
+          {
+            "node": "Workflow Configuration",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Store Form Responses",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent - Generate Song Recommendations",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "4f6ddea7-ddc0-4aba-ba9f-fcaff0e6e1f3",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "51141671f79f358fb6f3191e7e0daa3293c01545d942662a5c24c77d1589381d"
+  },
+  "id": "D1dndtAFYP6OY0khsFtnT",
+  "tags": []
+}
